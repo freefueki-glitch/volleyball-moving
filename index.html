@@ -203,7 +203,8 @@
   .rot-actions{ display:flex; justify-content:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
 
   /* ---- Court ---- */
-  .court-wrap{ background:var(--board-dark); border-radius:var(--radius); border:1px solid #0a1a17; padding:14px 10px; position:relative; }
+  .court-wrap{ background:var(--board-dark); border-radius:var(--radius); border:1px solid #0a1a17; padding:14px 10px; position:relative; display:flex; flex-direction:column; align-items:center; }
+  .court-wrap > *{ width:100%; }
   .team-label{ text-align:center; font-size:11px; letter-spacing:0.25em; color:var(--ink-dim); text-transform:uppercase; margin:2px 0 8px; }
   .team-label.opp{color:#f2a99f;}
   .team-label.own{color:#f0cd97;}
@@ -875,6 +876,7 @@
     renderCourt('own');
     renderCourt('opp');
     renderBall();
+    requestAnimationFrame(fitCourt);
   }
 
   ['half-own','half-opp'].forEach(hid=>{
@@ -893,10 +895,42 @@
   document.getElementById('rot-next').addEventListener('click', rotateOnce);
 
   const courtWrap = document.querySelector('.court-wrap');
+  const courtEl2 = document.getElementById('court-el');
   document.getElementById('toggle-orientation').addEventListener('click', (e)=>{
     const isLandscape = courtWrap.classList.toggle('landscape');
     e.target.textContent = isLandscape ? 'コートを縦向きに' : 'コートを横向きに';
+    requestAnimationFrame(fitCourt);
   });
+
+  // Shrink the court (preserving its shape) so it always fully fits the
+  // vertical space available inside .court-wrap, instead of scrolling/clipping.
+  function fitCourt(){
+    if(document.getElementById('tab-board').hidden) return;
+    courtEl2.style.width = '';
+    const wrapStyle = getComputedStyle(courtWrap);
+    const padTop = parseFloat(wrapStyle.paddingTop) || 0;
+    const padBottom = parseFloat(wrapStyle.paddingBottom) || 0;
+    const wrapInnerHeight = courtWrap.clientHeight - padTop - padBottom;
+    let usedByOthers = 0;
+    Array.from(courtWrap.children).forEach(child=>{
+      if(child === courtEl2) return;
+      const cs = getComputedStyle(child);
+      usedByOthers += child.offsetHeight + parseFloat(cs.marginTop||0) + parseFloat(cs.marginBottom||0);
+    });
+    const gapCount = courtWrap.children.length - 1;
+    const gap = parseFloat(wrapStyle.rowGap || wrapStyle.gap || 0) || 0;
+    usedByOthers += gap * gapCount;
+    const availableForCourt = Math.max(60, wrapInnerHeight - usedByOthers);
+    const naturalWidth = courtEl2.clientWidth;
+    const naturalHeight = courtEl2.offsetHeight;
+    if(naturalHeight > availableForCourt && naturalHeight > 0){
+      const scale = availableForCourt / naturalHeight;
+      const newWidth = Math.max(120, Math.floor(naturalWidth * scale));
+      courtEl2.style.width = newWidth + 'px';
+    }
+  }
+  window.addEventListener('resize', ()=>requestAnimationFrame(fitCourt));
+  window.addEventListener('orientationchange', ()=>setTimeout(fitCourt, 150));
 
   document.getElementById('ball-chip').addEventListener('pointerdown', (e)=>{ beginPossibleDrag(e, 'ball', 'ball'); });
 
@@ -1183,7 +1217,7 @@
       document.querySelector('.app').classList.toggle('board-active', tab === 'board');
       document.querySelector('footer.note').classList.toggle('hide-on-board', tab === 'board');
       if(tab === 'order'){ renderMatchSelect(); renderOrderTab(); }
-      if(tab === 'board'){ refreshOwnFromLineup(); render(); }
+      if(tab === 'board'){ refreshOwnFromLineup(); render(); requestAnimationFrame(fitCourt); }
     });
   });
 
