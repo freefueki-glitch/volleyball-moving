@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>作戦ボード | Volleyball Tactics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1614;
+    --board-dark:#122824;
+    --line:#eee6d3;
+    --line-dim:rgba(238,230,211,0.35);
+    --own:#e8a23a;
+    --own-dark:#a86f1e;
+    --opp:#d94f42;
+    --opp-dark:#9c3129;
+    --libero:#3aa0d9;
+    --panel:#132420;
+    --panel-line:#274943;
+    --ink:#eef3ef;
+    --ink-dim:#9db3ac;
+    --radius:14px;
+    --floor:#dba766;
+    --floor-line:#fdf6e6;
+    --zone-line:rgba(80,48,14,0.4);
+    --err:#ff9d8a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  html{ height:100%; }
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, #1a2f2a 0%, transparent 45%),
+      radial-gradient(circle at 90% 100%, #16292450 0%, transparent 40%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    -webkit-tap-highlight-color:transparent;
+    overscroll-behavior:none;
+  }
+  body.dragging, body.dragging *{ user-select:none; -webkit-user-select:none; }
+  body.board-lock{ height:100dvh; }
+
+  header.top{ padding:14px 16px 4px; text-align:center; flex:none; }
+  header.top .eyebrow{ font-size:11px; letter-spacing:0.35em; color:var(--ink-dim); text-transform:uppercase; }
+  header.top h1{ margin:4px 0 2px; font-size:20px; font-weight:900; letter-spacing:0.06em; }
+  header.top .sub{ font-size:12px; color:var(--ink-dim); }
+
+  .tabs{
+    max-width:1100px;
+    width:100%;
+    margin:10px auto 0;
+    padding:0 12px;
+    display:flex;
+    gap:6px;
+    flex:none;
+  }
+  .tab-btn{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    color:var(--ink-dim);
+    font-family:inherit;
+    font-weight:700;
+    font-size:12.5px;
+    padding:10px 4px;
+    border-radius:10px 10px 0 0;
+    cursor:pointer;
+  }
+  .tab-btn.active{
+    background:var(--own);
+    color:#1b1206;
+    border-color:var(--own);
+  }
+
+  .app{
+    max-width:1100px;
+    width:100%;
+    margin:0 auto;
+    padding:0 12px 24px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+  }
+  .app.board-active{ overflow:hidden; padding-bottom:8px; }
+  .tab-panel[hidden]{ display:none; }
+
+  #tab-board{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+  }
+  #tab-board .panel.own, #tab-board .panel.opponent{
+    flex:none;
+    max-height:30vh;
+    overflow-y:auto;
+  }
+  #tab-board .court-wrap{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+  }
+  footer.note.hide-on-board{ display:none; }
+
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:var(--radius);
+    padding:12px 14px 14px;
+  }
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:8px; flex-wrap:wrap;}
+  .panel-head .title{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .dot.own{background:var(--own);}
+  .dot.opp{background:var(--opp);}
+  .count{ font-size:11px; color:var(--ink-dim); font-variant-numeric:tabular-nums; }
+  .count.full{color:var(--err);}
+
+  form.add-player{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  form.add-player input[type=text]{ flex:1; min-width:64px; }
+  input[type=text], input[type=number], select{
+    background:var(--board-dark);
+    border:1px solid var(--panel-line);
+    color:var(--ink);
+    border-radius:8px;
+    padding:8px 9px;
+    font-size:13px;
+    font-family:inherit;
+  }
+  select.pos-select{ flex:none; width:76px; padding:8px 4px; }
+  input.num-input{ width:64px; flex:none; font-family:"Bebas Neue",sans-serif; font-size:16px; text-align:center; }
+  input:focus, select:focus{outline:2px solid var(--own); outline-offset:1px;}
+  select.full-select{ width:100%; margin-bottom:8px; }
+
+  button{ font-family:inherit; cursor:pointer; border:none; }
+  .btn-add{
+    background:var(--own); color:#1b1206; font-weight:700;
+    border-radius:8px; padding:0 14px; font-size:13px; flex:1 0 100%; height:34px;
+  }
+  .btn-add:disabled{background:#4a4a44; color:#8a8a83; cursor:not-allowed;}
+  .error-msg{ font-size:11.5px; color:var(--err); margin:-4px 0 8px; min-height:14px; }
+
+  .roster{ display:flex; flex-wrap:wrap; gap:6px; min-height:34px; }
+  .empty-msg{ font-size:12px; color:var(--ink-dim); padding:6px 2px; }
+  .player-chip{
+    display:flex; align-items:center; gap:6px; background:var(--board-dark);
+    border:1.5px solid transparent; border-radius:20px; padding:5px 8px 5px 5px;
+    font-size:12.5px; cursor:grab; touch-action:none; transition:border-color .12s ease;
+  }
+  .player-chip .badge{
+    min-width:24px;height:24px;border-radius:12px; display:flex;align-items:center;justify-content:center;
+    font-family:"Bebas Neue",sans-serif; font-size:12px; background:var(--own-dark); color:#fff; flex:none; padding:0 6px; white-space:nowrap;
+  }
+  .panel.opponent .player-chip .badge{background:var(--opp-dark);}
+  .player-chip.is-libero .badge{background:var(--libero); color:#08222f;}
+  .player-chip .pname{max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .player-chip .postag{ font-size:10px; color:var(--ink-dim); background:rgba(255,255,255,0.06); border-radius:6px; padding:1px 5px; flex:none; }
+  .player-chip.selected{ border-color:#fff; box-shadow:0 0 0 2px var(--own) inset, 0 0 10px 0 rgba(232,162,58,0.5); }
+  .panel.opponent .player-chip.selected{ box-shadow:0 0 0 2px var(--opp) inset, 0 0 10px 0 rgba(217,79,66,0.5); }
+  .player-chip.on-court{opacity:0.4;}
+  .player-chip .del{
+    width:16px;height:16px;border-radius:50%; background:transparent; color:var(--ink-dim); font-size:13px;
+    line-height:1; display:flex;align-items:center;justify-content:center; flex:none;
+  }
+  .player-chip .del:hover{ color:var(--err); }
+  .player-chip select.sub-select{
+    flex:none; max-width:110px; font-size:10px; padding:2px 3px; border-radius:6px;
+    background:var(--panel); color:var(--ink-dim); border:1px solid var(--panel-line);
+    cursor:pointer;
+  }
+
+  .hint{ font-size:11px; color:var(--ink-dim); margin-top:6px; }
+  .hint b{color:var(--ink);}
+
+  .slot-row{
+    display:flex; align-items:center; gap:8px; margin-bottom:7px;
+  }
+  .slot-row .slot-label{
+    width:32px; flex:none; font-family:"Bebas Neue",sans-serif; font-size:15px; color:var(--own);
+    text-align:center;
+  }
+  .slot-row select{ flex:1; }
+
+  .set-tabs{ display:flex; gap:6px; margin:10px 0; }
+  .set-tabs button{
+    flex:1; background:var(--board-dark); border:1px solid var(--panel-line); color:var(--ink-dim);
+    font-size:12px; font-weight:700; padding:8px 4px; border-radius:8px;
+  }
+  .set-tabs button.active{ background:var(--own); color:#1b1206; border-color:var(--own); }
+
+  .rot-actions{ display:flex; justify-content:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+
+  /* ---- Court ---- */
+  .court-wrap{ background:var(--board-dark); border-radius:var(--radius); border:1px solid #0a1a17; padding:14px 10px; position:relative; }
+  .team-label{ text-align:center; font-size:11px; letter-spacing:0.25em; color:var(--ink-dim); text-transform:uppercase; margin:2px 0 8px; }
+  .team-label.opp{color:#f2a99f;}
+  .team-label.own{color:#f0cd97;}
+
+  .court{
+    border:2.5px solid var(--floor-line); border-radius:4px; position:relative;
+    background:var(--floor);
+    box-shadow:0 0 0 1px rgba(0,0,0,0.25) inset;
+    touch-action:none;
+  }
+  .half{ position:relative; width:100%; aspect-ratio:1.7/1; overflow:visible; }
+  .half::before{ content:""; position:absolute; left:0; right:0; border-top:2px solid var(--floor-line); }
+  .opp-half::before{ top:66.667%; }
+  .own-half::before{ top:33.333%; }
+  .half.droppable{ background:rgba(255,255,255,0.16); }
+  .grid-line{ position:absolute; pointer-events:none; }
+  .grid-line.gl-v1{ left:33.333%; top:0; bottom:0; width:0; border-left:1.5px dotted var(--zone-line); }
+  .grid-line.gl-v2{ left:66.666%; top:0; bottom:0; width:0; border-left:1.5px dotted var(--zone-line); }
+  .grid-line.gl-h1{ top:50%; left:0; right:0; height:0; border-top:1.5px dotted var(--zone-line); }
+
+  .piece, .ghost-piece{
+    width:60px; height:60px; border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, var(--own) 0%, var(--own-dark) 78%);
+    color:#241705; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    box-shadow:0 3px 6px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.18) inset;
+    cursor:grab; line-height:1.1; touch-action:none;
+  }
+  .piece{ position:absolute; transform:translate(-50%,-50%); }
+  .piece.team-opp, .ghost-piece.team-opp{ background:radial-gradient(circle at 32% 28%, var(--opp) 0%, var(--opp-dark) 78%); color:#2a0805; }
+  .piece.libero, .ghost-piece.libero{ background:radial-gradient(circle at 32% 28%, var(--libero) 0%, #1c6f96 78%); color:#062232; }
+  .piece.dragged-source{opacity:0.3;}
+  .piece .pn, .ghost-piece .pn{font-family:"Bebas Neue",sans-serif; font-size:19px;}
+  .piece .pn.role, .ghost-piece .pn.role{font-size:13px; letter-spacing:0.2px;}
+  .piece .ptag, .ghost-piece .ptag{font-size:8px; opacity:0.85; margin-top:1px;}
+  .piece .pname-piece, .ghost-piece .pname-piece{
+    font-size:11px; font-weight:700; text-align:center; line-height:1.15;
+    padding:0 4px; max-width:52px; word-break:break-word; overflow:hidden;
+  }
+
+  .ghost-piece{
+    position:fixed; top:0; left:0; z-index:999; pointer-events:none;
+    box-shadow:0 8px 18px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.25) inset;
+    transform:translate(-30px,-30px) scale(1.08);
+  }
+
+  .net{
+    height:20px;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 6px, var(--line-dim) 6px 7px),
+      repeating-linear-gradient(0deg, transparent 0 6px, var(--line-dim) 6px 7px);
+    border-top:3px solid var(--line); border-bottom:3px solid var(--line); position:relative;
+  }
+  .net::before{
+    content:"NET"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    font-family:"Bebas Neue",sans-serif; font-size:10px; letter-spacing:0.3em; color:var(--bg);
+    background:var(--line); padding:1px 6px; border-radius:3px;
+  }
+
+  .court-actions{ display:flex; justify-content:center; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .btn-reset{
+    background:transparent; border:1px solid var(--panel-line); color:var(--ink-dim);
+    font-size:11.5px; padding:6px 12px; border-radius:20px;
+  }
+  .btn-reset:active{background:var(--panel-line);}
+  .btn-reset.tool-active{ background:var(--own); color:#1b1206; border-color:var(--own); font-weight:700; }
+
+  footer.note{ text-align:center; font-size:11px; color:var(--ink-dim); padding-top:4px; }
+
+  .panel.opponent{order:1;}
+  .court-wrap{order:2;}
+  .panel.own{order:3;}
+
+  @media (min-width:860px){
+    #tab-board.app-grid{
+      display:grid; grid-template-columns:220px 1fr 220px; align-items:start; gap:14px;
+    }
+    .panel.own{order:1;}
+    .court-wrap{order:2;}
+    .panel.opponent{order:3;}
+  }
+
+  /* ---- Landscape orientation ---- */
+  .court-wrap.landscape .court{ display:flex; flex-direction:row-reverse; }
+  .court-wrap.landscape .half{ aspect-ratio:1/1.55; width:auto; flex:1; }
+  .court-wrap.landscape .net{
+    width:20px; height:auto; align-self:stretch;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 6px, var(--line-dim) 6px 7px),
+      repeating-linear-gradient(90deg, transparent 0 6px, var(--line-dim) 6px 7px);
+    border-top:none; border-bottom:none; border-left:3px solid var(--line); border-right:3px solid var(--line);
+  }
+  .court-wrap.landscape .net::before{ writing-mode:vertical-rl; text-orientation:mixed; }
+  .court-wrap.landscape .half::before{ left:auto; right:auto; top:0; bottom:0; border-top:none; }
+  .court-wrap.landscape .opp-half::before{ left:33.333%; border-left:2px solid var(--floor-line); }
+  .court-wrap.landscape .own-half::before{ left:66.667%; border-left:2px solid var(--floor-line); }
+  .court-wrap.landscape .grid-line.gl-v1{ left:0; right:0; width:auto; bottom:auto; top:33.333%; height:0; border-left:none; border-top:1.5px dotted var(--zone-line); }
+  .court-wrap.landscape .grid-line.gl-v2{ left:0; right:0; width:auto; bottom:auto; top:66.666%; height:0; border-left:none; border-top:1.5px dotted var(--zone-line); }
+  .court-wrap.landscape .grid-line.gl-h1{ top:0; bottom:0; right:auto; height:auto; left:50%; width:0; border-top:none; border-left:1.5px dotted var(--zone-line); }
+  .court-wrap.landscape .team-label{ display:none; }
+  .court-wrap.landscape .court-side-label{
+    display:block; position:absolute; top:-18px; font-size:10px; letter-spacing:0.2em; color:var(--ink-dim);
+  }
+  .court-wrap.landscape .opp-half .court-side-label{ right:0; color:#f2a99f; }
+  .court-wrap.landscape .own-half .court-side-label{ left:0; color:#f0cd97; }
+  .court-side-label{ display:none; }
+
+  .ball-tray{ position:absolute; top:8px; right:10px; z-index:3; }
+  .mikasa-ball{
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 30% 24%, rgba(255,255,255,0.9), rgba(255,255,255,0) 45%),
+      conic-gradient(from -18deg, #f5f2e6 0deg 52deg, #1b3fa0 52deg 112deg, #f5f2e6 112deg 164deg, #f0b429 164deg 224deg, #f5f2e6 224deg 276deg, #1b3fa0 276deg 336deg, #f5f2e6 336deg 360deg);
+    border:1px solid rgba(20,20,20,0.35);
+    box-shadow:0 3px 6px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.2);
+  }
+  .ball-chip.mikasa-ball{ width:28px; height:28px; cursor:grab; touch-action:none; }
+  .ball-piece{ position:absolute; transform:translate(-50%,-50%); z-index:5; width:30px; height:30px; cursor:grab; touch-action:none; }
+  .ghost-piece.ball-ghost{ width:32px; height:32px; background-color:transparent; }
+
+  .draw-toolbar{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .color-dot{ width:18px;height:18px;border-radius:50%; display:inline-block; border:2px solid rgba(255,255,255,0.35); cursor:pointer; vertical-align:middle; }
+  .color-dot.selected{ border-color:#fff; box-shadow:0 0 0 2px var(--own); }
+  .draw-svg{ position:absolute; inset:0; width:100%; height:100%; z-index:10; pointer-events:none; touch-action:none; }
+  .draw-svg.active{ pointer-events:auto; cursor:crosshair; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="eyebrow">Volleyball Tactics Board</div>
+  <h1>作戦ボード</h1>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="register">① チーム登録</button>
+  <button class="tab-btn" data-tab="order">② オーダー設定</button>
+  <button class="tab-btn" data-tab="board">③ 作戦ボード</button>
+</div>
+
+<div class="app">
+
+  <!-- ===== TAB 1: チーム登録 ===== -->
+  <section class="tab-panel" id="tab-register">
+    <div class="panel">
+      <div class="panel-head"><div class="title">大会</div></div>
+      <form class="add-player" id="form-tournament">
+        <input type="text" id="tournament-name" placeholder="大会名(例: 春季大会)" required>
+        <input type="number" id="tournament-max" class="num-input" style="width:76px;" min="1" max="30" value="12" title="最大人数">
+        <button type="submit" class="btn-add">大会を追加</button>
+      </form>
+      <select class="full-select tournament-select-el" id="tournament-select"></select>
+      <div class="slot-row" id="max-roster-row" style="display:none;">
+        <span class="slot-label" style="width:auto;font-size:11px;color:var(--ink-dim);">最大人数</span>
+        <input type="number" id="max-roster-edit" min="1" max="30" style="width:70px;">
+      </div>
+      <div class="hint" id="no-tournament-hint">大会を追加すると、選手を登録できます。</div>
+    </div>
+
+    <div class="panel" id="roster-panel" style="margin-top:14px;">
+      <div class="panel-head">
+        <div class="title"><span class="dot own"></span>自チーム 登録</div>
+        <div class="count" id="count-roster">0 / 12</div>
+      </div>
+      <form class="add-player" id="form-roster">
+        <select class="num-input" id="roster-num" required></select>
+        <input type="text" placeholder="選手名" id="roster-name" required>
+        <select class="pos-select" id="roster-pos" required>
+          <option value="" disabled selected>Pos</option>
+          <option value="S">S</option>
+          <option value="OP">OP</option>
+          <option value="OH">OH</option>
+          <option value="MB">MB</option>
+          <option value="L">L</option>
+        </select>
+        <button type="submit" class="btn-add" id="btn-roster-add">追加</button>
+      </form>
+      <div class="error-msg" id="roster-error"></div>
+      <div class="roster" id="roster-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== TAB 2: オーダー設定 ===== -->
+  <section class="tab-panel" id="tab-order" hidden>
+    <div class="panel">
+      <div class="panel-head"><div class="title">試合(3セットマッチ)</div></div>
+      <form class="add-player" id="form-match">
+        <input type="text" id="match-name" placeholder="対戦相手名など" required>
+        <button type="submit" class="btn-add">試合を追加</button>
+      </form>
+      <select class="full-select match-select-el" id="match-select"></select>
+      <div class="hint" id="no-match-hint">①で大会・選手を登録し、試合を追加してください。</div>
+
+      <div class="set-tabs set-tabs-group" id="set-tabs">
+        <button data-set="0" class="active">Set 1</button>
+        <button data-set="1">Set 2</button>
+        <button data-set="2">Set 3</button>
+      </div>
+
+      <div class="panel-head"><div class="title">スタメン(P1〜P6)</div></div>
+      <div id="order-slots"></div>
+      <div class="hint">P1〜P6はコートの回転順です。③の作戦ボードでこの並びを使ってローテーションできます。</div>
+    </div>
+  </section>
+
+  <!-- ===== TAB 3: 作戦ボード ===== -->
+  <section class="tab-panel app-grid" id="tab-board" hidden>
+
+    <section class="panel own" id="panel-own">
+      <div class="panel-head">
+        <div class="title"><span class="dot own"></span>自チーム(スタメン)</div>
+      </div>
+      <select class="full-select tournament-select-el" id="tournament-select-board"></select>
+      <select class="full-select match-select-el" id="match-select-board"></select>
+      <div class="set-tabs set-tabs-group" id="set-tabs-board">
+        <button data-set="0" class="active">Set 1</button>
+        <button data-set="1">Set 2</button>
+        <button data-set="2">Set 3</button>
+      </div>
+      <div class="roster" id="roster-own"></div>
+      <div class="hint" id="own-lineup-hint">②でオーダーを設定すると、ここに選手が表示されます。</div>
+    </section>
+
+    <div class="court-wrap">
+      <div class="team-label opp">相手チーム</div>
+      <div class="court" id="court-el">
+        <div class="ball-tray" id="ball-tray"><div class="ball-chip mikasa-ball" id="ball-chip"></div></div>
+        <div class="half opp-half" id="half-opp" data-team="opp">
+          <span class="court-side-label">相手</span>
+          <div class="grid-line gl-v1"></div>
+          <div class="grid-line gl-v2"></div>
+          <div class="grid-line gl-h1"></div>
+        </div>
+        <div class="net"></div>
+        <div class="half own-half" id="half-own" data-team="own">
+          <span class="court-side-label">自チーム</span>
+          <div class="grid-line gl-v1"></div>
+          <div class="grid-line gl-v2"></div>
+          <div class="grid-line gl-h1"></div>
+        </div>
+        <svg class="draw-svg" id="draw-svg"></svg>
+      </div>
+      <div class="team-label own">自チーム</div>
+
+      <div class="rot-actions">
+        <button class="btn-reset" id="rot-init">初期配置</button>
+        <button class="btn-reset" id="rot-next">🔁 ローテーション</button>
+      </div>
+
+      <div class="draw-toolbar">
+        <button class="btn-reset" id="draw-toggle">✏️ 描画</button>
+        <span class="color-dot selected" data-color="#ffffff" style="background:#ffffff"></span>
+        <span class="color-dot" data-color="#ff4d4d" style="background:#ff4d4d"></span>
+        <span class="color-dot" data-color="#ffd23f" style="background:#ffd23f"></span>
+        <span class="color-dot" data-color="#111111" style="background:#111111"></span>
+        <button class="btn-reset" id="draw-undo">元に戻す</button>
+        <button class="btn-reset" id="draw-clear">線を消す</button>
+      </div>
+
+      <div class="court-actions">
+        <button class="btn-reset" id="toggle-orientation">コートを横向きに</button>
+        <button class="btn-reset" id="reset-own">自チームの配置をリセット</button>
+        <button class="btn-reset" id="reset-opp">相手チームの配置をリセット</button>
+      </div>
+    </div>
+
+    <section class="panel opponent" id="panel-opp">
+      <div class="panel-head">
+        <div class="title"><span class="dot opp"></span>相手チーム</div>
+        <div class="count">Positions</div>
+      </div>
+      <div class="roster" id="roster-opp"></div>
+      <div class="hint">選手登録は不要です。<b>OP・S・L・OH 1・OH 2・MB 1・MB 2</b> をコートへドラッグしてください。</div>
+    </section>
+
+  </section>
+
+</div>
+
+<footer class="note">コート上のコマはドラッグで自由な位置へ移動、コート外へドラッグでベンチに戻ります。</footer>
+
+<script>
+(function(){
+  const POS_OPTIONS = ['S','OP','OH','MB','L'];
+  const ROT_LABELS = ['P1','P2','P3','P4','P5','P6'];
+  const ROT_ANCHORS = [
+    {x:80,y:78}, {x:80,y:22}, {x:50,y:22}, {x:20,y:22}, {x:20,y:78}, {x:50,y:78}
+  ];
+
+  const OPP_ROLES = [
+    {pos:'OP',   name:'Opposite',  libero:false},
+    {pos:'S',    name:'Setter',    libero:false},
+    {pos:'L',    name:'Libero',    libero:true},
+    {pos:'OH 1', name:'Outside 1', libero:false},
+    {pos:'OH 2', name:'Outside 2', libero:false},
+    {pos:'MB 1', name:'Middle 1',  libero:false},
+    {pos:'MB 2', name:'Middle 2',  libero:false}
+  ];
+  const MAX_ON_COURT = 6;
+
+  // ---------------- Data model: tournaments > roster / matches > sets ----------------
+  let tournaments = [];
+  let nextTournamentId = 1, nextMatchId = 1, nextRosterId = 1;
+  let currentTournamentId = null;
+  let currentMatchId = null;
+  let currentSetIndex = 0;
+
+  function getTournament(id){ return tournaments.find(t=>t.id===id) || null; }
+  function getCurrentTournament(){ return getTournament(currentTournamentId); }
+  function getCurrentMatch(){
+    const t = getCurrentTournament();
+    if(!t) return null;
+    return t.matches.find(m=>m.id===currentMatchId) || null;
+  }
+  function getCurrentSet(){
+    const m = getCurrentMatch();
+    if(!m) return null;
+    return m.sets[currentSetIndex];
+  }
+
+  function newSet(){ return {starters:[null,null,null,null,null,null]}; }
+
+  function addTournament(name, maxRoster){
+    const max = Math.max(1, Math.min(30, parseInt(maxRoster,10) || 12));
+    const t = {id:'trn-'+(nextTournamentId++), name:name.trim(), roster:[], matches:[], maxRoster:max};
+    tournaments.push(t);
+    currentTournamentId = t.id;
+    currentMatchId = null;
+    currentSetIndex = 0;
+  }
+
+  function addMatch(name){
+    const t = getCurrentTournament();
+    if(!t) return;
+    const m = {id:'mtc-'+(nextMatchId++), name:name.trim(), sets:[newSet(), newSet(), newSet()]};
+    t.matches.push(m);
+    currentMatchId = m.id;
+    currentSetIndex = 0;
+  }
+
+  function addRosterPlayer(num, name, pos){
+    const t = getCurrentTournament();
+    if(!t) return {ok:false, msg:'先に大会を選択・追加してください。'};
+    const max = t.maxRoster || 12;
+    const n = parseInt(num, 10);
+    if(!n || n < 1 || n > max) return {ok:false, msg:'背番号は1〜'+max+'で入力してください。'};
+    if(t.roster.some(p=>p.num === n)) return {ok:false, msg:'その背番号は既に使われています。'};
+    if(t.roster.length >= max) return {ok:false, msg:'この大会の登録は'+max+'人までです。'};
+    t.roster.push({id:'plr-'+(nextRosterId++), num:n, name:name.trim(), pos:pos});
+    return {ok:true};
+  }
+
+  function deleteRosterPlayer(id){
+    const t = getCurrentTournament();
+    if(!t) return;
+    t.roster = t.roster.filter(p=>p.id!==id);
+    // remove from any sets' starters across this tournament
+    t.matches.forEach(m=>{
+      m.sets.forEach(s=>{
+        s.starters = s.starters.map(pid=> pid===id ? null : pid);
+      });
+    });
+  }
+
+  // ---------------- Court/tactics state (own = current lineup, opp = fixed roles) ----------------
+  const state = {
+    own:  { players:[], placements:{} },
+    opp:  { players:[], placements:{} }
+  };
+  const ball = { placed:false, x:50, y:50 };
+  let selected = null; // {team, id}
+
+  function initOpp(){
+    state.opp.players = OPP_ROLES.map((r,i)=>({id:'opp-'+i, num:null, name:r.name, pos:r.pos, libero:r.libero}));
+  }
+
+  function refreshOwnFromLineup(){
+    const set = getCurrentSet();
+    const t = getCurrentTournament();
+    state.own.players = [];
+    if(set && t){
+      set.starters.forEach((pid,slot)=>{
+        if(!pid) return;
+        const p = t.roster.find(r=>r.id===pid);
+        if(p) state.own.players.push({id:p.id, num:String(p.num), name:p.name, pos:p.pos, libero:p.pos==='L', slot:slot});
+      });
+    }
+    const validIds = new Set(state.own.players.map(p=>p.id));
+    Object.keys(state.own.placements).forEach(id=>{ if(!validIds.has(id)) delete state.own.placements[id]; });
+  }
+
+  function substitutePlayer(slotIndex, newPlayerId){
+    const set = getCurrentSet();
+    if(!set) return;
+    const oldId = set.starters[slotIndex];
+    if(oldId === newPlayerId) return;
+    set.starters[slotIndex] = newPlayerId || null;
+    if(oldId && state.own.placements[oldId]){
+      if(newPlayerId) state.own.placements[newPlayerId] = state.own.placements[oldId];
+      delete state.own.placements[oldId];
+    }
+    if(selected && selected.team==='own' && selected.id===oldId) selected = null;
+    refreshOwnFromLineup();
+    renderOrderTab();
+    render();
+  }
+
+  function isPlaced(team, id){ return !!state[team].placements[id]; }
+  function onCourtCount(team){ return Object.keys(state[team].placements).length; }
+
+  function place(team, id, xy){
+    const t = state[team];
+    if(!t.placements[id] && onCourtCount(team) >= MAX_ON_COURT){ render(); return; }
+    t.placements[id] = xy;
+    selected = null;
+    render();
+  }
+  function unplace(team, id){
+    if(state[team].placements[id]){ delete state[team].placements[id]; render(); }
+  }
+
+  function onChipTap(team, id){
+    if(isPlaced(team, id)){ unplace(team, id); return; }
+    if(selected && selected.team===team && selected.id===id){ selected = null; }
+    else{ selected = {team, id}; }
+    render();
+  }
+  function onHalfTap(team, halfEl, clientX, clientY){
+    if(!(selected && selected.team===team)) return;
+    place(team, selected.id, relativeXY(halfEl, clientX, clientY));
+  }
+  function resetFormation(team){ state[team].placements = {}; render(); }
+
+  function el(tag, cls, html){
+    const e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(html!==undefined) e.innerHTML = html;
+    return e;
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function relativeXY(halfEl, clientX, clientY){
+    const r = halfEl.getBoundingClientRect();
+    let x = (clientX - r.left) / r.width * 100;
+    let y = (clientY - r.top) / r.height * 100;
+    x = Math.max(4, Math.min(96, x));
+    y = Math.max(6, Math.min(94, y));
+    return {x, y};
+  }
+
+  // ---------------- Rotation ----------------
+  function applyFormationFromStarters(){
+    const set = getCurrentSet();
+    if(!set) return;
+    set.starters.forEach((pid,i)=>{
+      if(pid) state.own.placements[pid] = {x:ROT_ANCHORS[i].x, y:ROT_ANCHORS[i].y};
+    });
+    render();
+  }
+  function maybeAutoFormation(set){
+    if(!set) return;
+    const complete = set.starters.every(id=>!!id);
+    if(complete && !set._autoPlaced){
+      set._autoPlaced = true;
+      applyFormationFromStarters();
+    } else if(!complete){
+      set._autoPlaced = false;
+    }
+  }
+  function rotateOnce(){
+    const set = getCurrentSet();
+    if(!set) return;
+    set.starters = set.starters.slice(1).concat([set.starters[0]]);
+    set.starters.forEach((pid,i)=>{
+      if(pid) state.own.placements[pid] = {x:ROT_ANCHORS[i].x, y:ROT_ANCHORS[i].y};
+    });
+    renderOrderTab();
+    render();
+  }
+
+  // ---------------- Drag & drop ----------------
+  let drag = null;
+  let justDragged = false;
+
+  function pieceInnerHtml(p){
+    if(p.num){ return '<span class="pname-piece">'+escapeHtml(p.name)+'</span>'; }
+    return '<span class="pn role">'+escapeHtml(p.pos)+'</span>';
+  }
+  function beginPossibleDrag(e, team, id){
+    if(e.button !== undefined && e.button !== 0) return;
+    if(team === 'ball'){ drag = {team:'ball', id:'ball', wasPlaced:ball.placed, moved:false, startX:e.clientX, startY:e.clientY}; return; }
+    drag = {team, id, wasPlaced:isPlaced(team,id), moved:false, startX:e.clientX, startY:e.clientY};
+  }
+  function createGhost(team, id){
+    if(team === 'ball'){
+      const g = document.createElement('div');
+      g.className = 'ghost-piece ball-ghost mikasa-ball';
+      document.body.appendChild(g);
+      return g;
+    }
+    const t = state[team];
+    const p = t.players.find(pl=>pl.id===id);
+    if(!p) return null;
+    const g = document.createElement('div');
+    g.className = 'ghost-piece' + (team==='opp' ? ' team-opp' : '') + (p.libero ? ' libero' : '');
+    g.innerHTML = pieceInnerHtml(p);
+    document.body.appendChild(g);
+    return g;
+  }
+  function moveGhost(g, x, y){ g.style.left = x + 'px'; g.style.top = y + 'px'; }
+  function clearHalfHighlights(){ document.querySelectorAll('.half.droppable').forEach(h=>h.classList.remove('droppable')); }
+  function highlightUnderPointer(x, y){
+    clearHalfHighlights();
+    const under = document.elementFromPoint(x, y);
+    const half = under && under.closest ? under.closest('.half') : null;
+    if(half && half.dataset.team === drag.team){ half.classList.add('droppable'); }
+  }
+  function handleDrop(x, y){
+    if(drag.team === 'ball'){
+      const under = document.elementFromPoint(x, y);
+      const courtEl = under && under.closest ? under.closest('.court') : null;
+      if(courtEl){
+        const r = courtEl.getBoundingClientRect();
+        let bx = (x - r.left) / r.width * 100, by = (y - r.top) / r.height * 100;
+        bx = Math.max(2, Math.min(98, bx)); by = Math.max(2, Math.min(98, by));
+        ball.placed = true; ball.x = bx; ball.y = by;
+      } else { ball.placed = false; }
+      render();
+      return;
+    }
+    const under = document.elementFromPoint(x, y);
+    const half = under && under.closest ? under.closest('.half') : null;
+    if(half && half.dataset.team === drag.team){ place(drag.team, drag.id, relativeXY(half, x, y)); return; }
+    if(drag.wasPlaced){ unplace(drag.team, drag.id); } else { render(); }
+  }
+
+  document.addEventListener('pointermove', (e)=>{
+    if(!drag) return;
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    if(!drag.moved && Math.hypot(dx, dy) > 6){
+      drag.moved = true;
+      document.body.classList.add('dragging');
+      drag.ghost = createGhost(drag.team, drag.id);
+      const srcEl = document.querySelector('.piece[data-piece-id="'+drag.id+'"][data-piece-team="'+drag.team+'"]');
+      if(srcEl) srcEl.classList.add('dragged-source');
+    }
+    if(drag.moved){
+      if(drag.ghost) moveGhost(drag.ghost, e.clientX, e.clientY);
+      highlightUnderPointer(e.clientX, e.clientY);
+    }
+  });
+  document.addEventListener('pointerup', (e)=>{
+    if(!drag) return;
+    if(drag.moved){
+      handleDrop(e.clientX, e.clientY);
+      if(drag.ghost) drag.ghost.remove();
+      clearHalfHighlights();
+      document.body.classList.remove('dragging');
+      justDragged = true;
+      setTimeout(()=>{ justDragged = false; }, 0);
+    } else {
+      if(drag.team === 'ball'){ ball.placed = !ball.placed; render(); }
+      else { onChipTap(drag.team, drag.id); }
+    }
+    drag = null;
+  });
+  document.addEventListener('pointercancel', ()=>{
+    if(drag && drag.ghost) drag.ghost.remove();
+    clearHalfHighlights();
+    document.body.classList.remove('dragging');
+    drag = null;
+  });
+
+  // ---------------- Render: court/roster ----------------
+  function renderRoster(team){
+    const container = document.getElementById('roster-' + team);
+    container.innerHTML = '';
+    const t = state[team];
+    if(t.players.length===0){
+      container.appendChild(el('div','empty-msg', team==='own' ? 'スタメンが未設定です' : 'まだ選手がいません'));
+    }
+    t.players.forEach(p=>{
+      const onCourt = isPlaced(team, p.id);
+      const isSel = selected && selected.team===team && selected.id===p.id;
+      const chip = el('div', 'player-chip' + (isSel?' selected':'') + (onCourt?' on-court':'') + (p.libero?' is-libero':''));
+      if(p.num){
+        chip.innerHTML =
+          '<span class="badge">'+escapeHtml(p.num)+'</span>' +
+          '<span class="pname">'+escapeHtml(p.name)+'</span>' +
+          '<span class="postag">'+escapeHtml(p.pos)+'</span>';
+      } else {
+        chip.innerHTML =
+          '<span class="badge">'+escapeHtml(p.pos)+'</span>' +
+          '<span class="pname">'+escapeHtml(p.name)+'</span>';
+      }
+      if(team==='own'){
+        const swapSel = buildSubSelect(p);
+        if(swapSel) chip.appendChild(swapSel);
+      }
+      chip.addEventListener('pointerdown', (e)=>{
+        if(e.target.closest('select')) return;
+        beginPossibleDrag(e, team, p.id);
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  function buildSubSelect(p){
+    const t = getCurrentTournament();
+    const set = getCurrentSet();
+    if(!t || !set || p.slot===undefined) return null;
+    const usedIds = new Set(set.starters.filter(id=>id));
+    const sel = document.createElement('select');
+    sel.className = 'sub-select';
+    const cur = el('option', null, '⇄ '+escapeHtml(p.num)+' '+escapeHtml(p.name));
+    cur.value = p.id; cur.selected = true;
+    sel.appendChild(cur);
+    t.roster.slice().sort((a,b)=>a.num-b.num).forEach(r=>{
+      if(r.id===p.id || usedIds.has(r.id)) return;
+      const opt = el('option', null, escapeHtml(r.num+' '+r.name+' ('+r.pos+')'));
+      opt.value = r.id;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('pointerdown', (e)=>e.stopPropagation());
+    sel.addEventListener('change', ()=>{ substitutePlayer(p.slot, sel.value); });
+    return sel;
+  }
+
+  function renderCourt(team){
+    const halfEl = document.getElementById('half-' + team);
+    halfEl.querySelectorAll('.piece').forEach(n=>n.remove());
+    const t = state[team];
+    Object.keys(t.placements).forEach(id=>{
+      const p = t.players.find(pl=>pl.id===id);
+      if(!p) return;
+      const xy = t.placements[id];
+      const piece = el('div','piece' + (team==='opp' ? ' team-opp' : '') + (p.libero?' libero':''));
+      piece.dataset.pieceId = p.id;
+      piece.dataset.pieceTeam = team;
+      piece.style.left = xy.x + '%';
+      piece.style.top = xy.y + '%';
+      piece.innerHTML = pieceInnerHtml(p);
+      piece.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); beginPossibleDrag(e, team, p.id); });
+      halfEl.appendChild(piece);
+    });
+  }
+
+  function renderBall(){
+    const tray = document.getElementById('ball-tray');
+    const courtEl = document.getElementById('court-el');
+    const oldPiece = document.getElementById('ball-piece');
+    if(oldPiece) oldPiece.remove();
+    if(ball.placed){
+      tray.style.display = 'none';
+      const piece = el('div','ball-piece mikasa-ball');
+      piece.id = 'ball-piece';
+      piece.style.left = ball.x + '%';
+      piece.style.top = ball.y + '%';
+      piece.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); beginPossibleDrag(e, 'ball', 'ball'); });
+      courtEl.appendChild(piece);
+    } else {
+      tray.style.display = '';
+    }
+  }
+
+  function render(){
+    renderRoster('own');
+    renderRoster('opp');
+    renderCourt('own');
+    renderCourt('opp');
+    renderBall();
+  }
+
+  ['half-own','half-opp'].forEach(hid=>{
+    const halfEl = document.getElementById(hid);
+    const team = halfEl.dataset.team;
+    halfEl.addEventListener('click', (e)=>{
+      if(justDragged) return;
+      if(e.target.closest('.piece')) return;
+      onHalfTap(team, halfEl, e.clientX, e.clientY);
+    });
+  });
+
+  document.getElementById('reset-own').addEventListener('click', ()=>resetFormation('own'));
+  document.getElementById('reset-opp').addEventListener('click', ()=>resetFormation('opp'));
+  document.getElementById('rot-init').addEventListener('click', applyFormationFromStarters);
+  document.getElementById('rot-next').addEventListener('click', rotateOnce);
+
+  const courtWrap = document.querySelector('.court-wrap');
+  document.getElementById('toggle-orientation').addEventListener('click', (e)=>{
+    const isLandscape = courtWrap.classList.toggle('landscape');
+    e.target.textContent = isLandscape ? 'コートを縦向きに' : 'コートを横向きに';
+  });
+
+  document.getElementById('ball-chip').addEventListener('pointerdown', (e)=>{ beginPossibleDrag(e, 'ball', 'ball'); });
+
+  // ---------------- Freehand drawing ----------------
+  const drawState = { active:false, color:'#ffffff', strokes:[], current:null };
+  const svgEl = document.getElementById('draw-svg');
+  const drawToggleBtn = document.getElementById('draw-toggle');
+
+  function relPctFromCourt(clientX, clientY){
+    const r = document.getElementById('court-el').getBoundingClientRect();
+    let x = (clientX - r.left) / r.width * 100, y = (clientY - r.top) / r.height * 100;
+    x = Math.max(0, Math.min(100, x)); y = Math.max(0, Math.min(100, y));
+    return {x, y};
+  }
+  function renderStrokes(){
+    svgEl.innerHTML = '';
+    const all = drawState.current ? drawState.strokes.concat([drawState.current]) : drawState.strokes;
+    all.forEach(s=>{
+      if(s.points.length < 2) return;
+      const d = 'M' + s.points.map(p=>p.x+','+p.y).join(' L');
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', d);
+      path.setAttribute('stroke', s.color);
+      path.setAttribute('stroke-width', '3');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      path.setAttribute('vector-effect', 'non-scaling-stroke');
+      svgEl.appendChild(path);
+    });
+  }
+  svgEl.addEventListener('pointerdown', (e)=>{
+    if(!drawState.active) return;
+    e.preventDefault();
+    svgEl.setPointerCapture(e.pointerId);
+    drawState.current = {color:drawState.color, points:[relPctFromCourt(e.clientX, e.clientY)]};
+    renderStrokes();
+  });
+  svgEl.addEventListener('pointermove', (e)=>{
+    if(!drawState.active || !drawState.current) return;
+    e.preventDefault();
+    drawState.current.points.push(relPctFromCourt(e.clientX, e.clientY));
+    renderStrokes();
+  });
+  svgEl.addEventListener('pointerup', (e)=>{
+    if(!drawState.active || !drawState.current) return;
+    e.preventDefault();
+    drawState.strokes.push(drawState.current);
+    drawState.current = null;
+    renderStrokes();
+  });
+  svgEl.addEventListener('pointercancel', ()=>{ drawState.current = null; renderStrokes(); });
+  drawToggleBtn.addEventListener('click', ()=>{
+    drawState.active = !drawState.active;
+    svgEl.classList.toggle('active', drawState.active);
+    drawToggleBtn.classList.toggle('tool-active', drawState.active);
+    drawToggleBtn.textContent = drawState.active ? '✏️ 描画中' : '✏️ 描画';
+  });
+  document.querySelectorAll('.color-dot').forEach(dot=>{
+    dot.addEventListener('click', ()=>{
+      drawState.color = dot.dataset.color;
+      document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('selected'));
+      dot.classList.add('selected');
+    });
+  });
+  document.getElementById('draw-undo').addEventListener('click', ()=>{ drawState.strokes.pop(); renderStrokes(); });
+  document.getElementById('draw-clear').addEventListener('click', ()=>{ drawState.strokes = []; renderStrokes(); });
+
+  // ================= TAB 1: チーム登録 =================
+  function renderTournamentSelect(){
+    document.querySelectorAll('.tournament-select-el').forEach(sel=>{
+      sel.innerHTML = '';
+      tournaments.forEach(t=>{
+        const opt = el('option', null, escapeHtml(t.name));
+        opt.value = t.id;
+        if(t.id === currentTournamentId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    });
+    document.getElementById('no-tournament-hint').style.display = tournaments.length ? 'none' : '';
+    document.getElementById('roster-panel').style.display = currentTournamentId ? '' : 'none';
+    const t = getCurrentTournament();
+    const maxRow = document.getElementById('max-roster-row');
+    const maxEdit = document.getElementById('max-roster-edit');
+    if(t){ maxRow.style.display = ''; maxEdit.value = t.maxRoster; }
+    else { maxRow.style.display = 'none'; }
+  }
+
+  function renderRosterNumOptions(){
+    const t = getCurrentTournament();
+    const sel = document.getElementById('roster-num');
+    const prev = sel.value;
+    sel.innerHTML = '';
+    if(!t) return;
+    const used = new Set(t.roster.map(p=>p.num));
+    for(let n=1; n<=(t.maxRoster||12); n++){
+      if(used.has(n)) continue;
+      const opt = el('option', null, String(n));
+      opt.value = n;
+      sel.appendChild(opt);
+    }
+    if([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+  }
+
+  function renderRosterTab(){
+    const t = getCurrentTournament();
+    const list = document.getElementById('roster-list');
+    list.innerHTML = '';
+    renderRosterNumOptions();
+    if(!t){ return; }
+    if(t.roster.length===0){ list.appendChild(el('div','empty-msg','まだ選手がいません')); }
+    t.roster.slice().sort((a,b)=>a.num-b.num).forEach(p=>{
+      const chip = el('div','player-chip');
+      chip.innerHTML =
+        '<span class="badge">'+escapeHtml(p.num)+'</span>' +
+        '<span class="pname">'+escapeHtml(p.name)+'</span>' +
+        '<span class="postag">'+escapeHtml(p.pos)+'</span>' +
+        '<span class="del" data-del="1">✕</span>';
+      chip.querySelector('[data-del]').addEventListener('click', ()=>{
+        deleteRosterPlayer(p.id);
+        renderRosterTab();
+        renderOrderTab();
+      });
+      list.appendChild(chip);
+    });
+    const max = t.maxRoster || 12;
+    const count = document.getElementById('count-roster');
+    count.textContent = t.roster.length + ' / ' + max;
+    count.classList.toggle('full', t.roster.length>=max);
+    document.getElementById('btn-roster-add').disabled = t.roster.length>=max;
+  }
+
+  document.getElementById('max-roster-edit').addEventListener('change', e=>{
+    const t = getCurrentTournament();
+    if(!t) return;
+    let v = parseInt(e.target.value, 10);
+    if(!v || v < t.roster.length) v = Math.max(t.roster.length, 1);
+    v = Math.max(1, Math.min(30, v));
+    t.maxRoster = v;
+    e.target.value = v;
+    renderRosterTab();
+  });
+
+  document.getElementById('form-tournament').addEventListener('submit', e=>{
+    e.preventDefault();
+    const name = document.getElementById('tournament-name').value;
+    const maxRoster = document.getElementById('tournament-max').value;
+    if(!name.trim()) return;
+    addTournament(name, maxRoster);
+    e.target.reset();
+    document.getElementById('tournament-max').value = 12;
+    renderTournamentSelect();
+    renderRosterTab();
+    renderMatchSelect();
+    renderOrderTab();
+    refreshOwnFromLineup();
+    render();
+  });
+  document.querySelectorAll('.tournament-select-el').forEach(sel=>{
+    sel.addEventListener('change', e=>{
+      currentTournamentId = e.target.value;
+      currentMatchId = null;
+      currentSetIndex = 0;
+      renderTournamentSelect();
+      renderRosterTab();
+      renderMatchSelect();
+      renderOrderTab();
+      refreshOwnFromLineup();
+      render();
+    });
+  });
+  document.getElementById('form-roster').addEventListener('submit', e=>{
+    e.preventDefault();
+    const num = document.getElementById('roster-num').value;
+    const name = document.getElementById('roster-name').value;
+    const pos = document.getElementById('roster-pos').value;
+    const errEl = document.getElementById('roster-error');
+    errEl.textContent = '';
+    if(!num || !name.trim() || !pos) return;
+    const result = addRosterPlayer(num, name, pos);
+    if(!result.ok){ errEl.textContent = result.msg; return; }
+    document.getElementById('roster-name').value = '';
+    document.getElementById('roster-pos').value = '';
+    renderRosterTab();
+    renderOrderTab();
+    document.getElementById('roster-name').focus();
+  });
+
+  // ================= TAB 2: オーダー設定 =================
+  function renderMatchSelect(){
+    const t = getCurrentTournament();
+    document.querySelectorAll('.match-select-el').forEach(sel=>{
+      sel.innerHTML = '';
+      if(t){
+        t.matches.forEach(m=>{
+          const opt = el('option', null, escapeHtml(m.name));
+          opt.value = m.id;
+          if(m.id === currentMatchId) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+    });
+    document.getElementById('no-match-hint').style.display = (t && t.matches.length) ? 'none' : '';
+  }
+
+  function renderOrderTab(){
+    const t = getCurrentTournament();
+    const set = getCurrentSet();
+    document.querySelectorAll('.set-tabs-group button').forEach(b=>{
+      b.classList.toggle('active', parseInt(b.dataset.set,10)===currentSetIndex);
+    });
+    const container = document.getElementById('order-slots');
+    container.innerHTML = '';
+    if(!t || !set){ return; }
+    ROT_LABELS.forEach((label,i)=>{
+      const row = el('div','slot-row');
+      row.appendChild(el('span','slot-label', label));
+      const sel = document.createElement('select');
+      sel.dataset.slot = i;
+      const blank = el('option', null, '未設定'); blank.value=''; sel.appendChild(blank);
+      t.roster.slice().sort((a,b)=>a.num-b.num).forEach(p=>{
+        const opt = el('option', null, escapeHtml(p.num+' '+p.name+' ('+p.pos+')'));
+        opt.value = p.id;
+        if(set.starters[i]===p.id) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', ()=>{
+        const val = sel.value || null;
+        if(val && set.starters.includes(val)){
+          const dupIdx = set.starters.indexOf(val);
+          if(dupIdx !== i) set.starters[dupIdx] = null;
+        }
+        set.starters[i] = val;
+        renderOrderTab();
+        refreshOwnFromLineup();
+        maybeAutoFormation(set);
+        render();
+      });
+      row.appendChild(sel);
+      container.appendChild(row);
+    });
+  }
+
+  document.getElementById('form-match').addEventListener('submit', e=>{
+    e.preventDefault();
+    const name = document.getElementById('match-name').value;
+    if(!name.trim()) return;
+    addMatch(name);
+    e.target.reset();
+    renderMatchSelect();
+    renderOrderTab();
+    refreshOwnFromLineup();
+    render();
+  });
+  document.querySelectorAll('.match-select-el').forEach(sel=>{
+    sel.addEventListener('change', e=>{
+      currentMatchId = e.target.value;
+      currentSetIndex = 0;
+      renderMatchSelect();
+      renderOrderTab();
+      refreshOwnFromLineup();
+      render();
+    });
+  });
+  document.querySelectorAll('.set-tabs-group button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentSetIndex = parseInt(btn.dataset.set, 10);
+      renderOrderTab();
+      refreshOwnFromLineup();
+      render();
+    });
+  });
+
+  // ================= Tab switching =================
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('tab-register').hidden = tab !== 'register';
+      document.getElementById('tab-order').hidden = tab !== 'order';
+      document.getElementById('tab-board').hidden = tab !== 'board';
+      document.body.classList.toggle('board-lock', tab === 'board');
+      document.querySelector('.app').classList.toggle('board-active', tab === 'board');
+      document.querySelector('footer.note').classList.toggle('hide-on-board', tab === 'board');
+      if(tab === 'order'){ renderMatchSelect(); renderOrderTab(); }
+      if(tab === 'board'){ refreshOwnFromLineup(); render(); }
+    });
+  });
+
+  // ---------------- init ----------------
+  initOpp();
+  renderTournamentSelect();
+  renderRosterTab();
+  renderMatchSelect();
+  renderOrderTab();
+  refreshOwnFromLineup();
+  render();
+})();
+</script>
+</body>
+</html>
