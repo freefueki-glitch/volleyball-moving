@@ -54,7 +54,7 @@
   .tabs{
     max-width:1100px;
     width:100%;
-    margin:10px auto 0;
+    margin:6px auto 0;
     padding:0 12px;
     display:flex;
     gap:6px;
@@ -67,10 +67,13 @@
     color:var(--ink-dim);
     font-family:inherit;
     font-weight:700;
-    font-size:12.5px;
-    padding:10px 4px;
-    border-radius:10px 10px 0 0;
+    font-size:11.5px;
+    padding:6px 4px;
+    border-radius:8px 8px 0 0;
     cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .tab-btn.active{
     background:var(--own);
@@ -101,11 +104,24 @@
     min-height:0;
     overflow:hidden;
   }
-  #tab-board .panel.own, #tab-board .panel.opponent{
-    flex:none;
-    max-height:30vh;
-    overflow-y:auto;
+  @media (max-width:859px){
+    #tab-board .panel.own, #tab-board .panel.opponent{
+      flex:none;
+      max-height:18vh;
+      overflow-y:auto;
+      padding:8px 10px 10px;
+    }
   }
+  #tab-board .player-chip{
+    font-size:11px;
+    padding:4px 6px 4px 4px;
+    gap:4px;
+  }
+  #tab-board .player-chip .badge{ min-width:20px; height:20px; font-size:11px; padding:0 5px; }
+  #tab-board .player-chip .pname{ max-width:64px; }
+  #tab-board .panel .panel-head{ margin-bottom:5px; }
+  #tab-board .panel .panel-head .title{ font-size:12.5px; }
+  #tab-board .panel select.full-select, #tab-board .panel .set-tabs-group{ margin-bottom:5px; }
   #tab-board .court-wrap{
     flex:1 1 auto;
     min-height:0;
@@ -202,6 +218,49 @@
 
   .rot-actions{ display:flex; justify-content:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
 
+  .mini-court{
+    position:relative;
+    width:100%;
+    aspect-ratio:1.9/1;
+    background:var(--floor);
+    border:2px solid var(--floor-line);
+    border-radius:6px;
+    overflow:hidden;
+    margin-top:4px;
+  }
+  .mini-piece{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    width:32px;height:32px;border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, #ffffff 0%, #cfcfcf 78%);
+    color:#1b1206;
+    display:flex; align-items:center; justify-content:center;
+    font-family:"Bebas Neue",sans-serif; font-size:12px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,255,255,0.15) inset;
+  }
+  .mini-piece.libero{ background:radial-gradient(circle at 32% 28%, var(--libero) 0%, #1c6f96 78%); color:#062232; }
+  .mini-piece.empty{ background:rgba(255,255,255,0.25); color:rgba(40,25,5,0.5); box-shadow:none; border:1.5px dashed rgba(80,48,14,0.4); }
+  .mini-empty-msg{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:rgba(40,25,5,0.55); z-index:3; }
+  .mini-net{ position:absolute; top:0; left:0; right:0; height:0; border-top:3px solid var(--line); }
+  .mini-attack-line{ position:absolute; left:0; right:0; top:33.333%; height:0; border-top:2px solid var(--floor-line); }
+  .mini-grid-line{ position:absolute; pointer-events:none; }
+  .mini-grid-line.v{ top:0; bottom:0; width:0; border-left:1.5px dotted var(--zone-line); }
+  .mini-grid-line.h{ left:0; right:0; height:0; border-top:1.5px dotted var(--zone-line); }
+  #mini-court-order .mini-piece{ width:48px; height:48px; font-size:17px; }
+  #mini-court-order .mini-piece.empty{ font-size:11px; }
+  #mini-court-order{ aspect-ratio:2.3/1; }
+
+  .order-layout{ display:flex; flex-direction:column; gap:14px; }
+  .order-layout .order-left, .order-layout .order-right{ min-width:0; }
+  @media (min-width:700px){
+    .order-layout{ flex-direction:row; align-items:flex-start; }
+    .order-layout .order-left{ flex:1 1 50%; }
+    .order-layout .order-right{ flex:1 1 50%; position:sticky; top:0; }
+    #mini-court-order{ aspect-ratio:1.5/1; }
+  }
+  #roster-order-drag .player-chip{ cursor:grab; touch-action:none; }
+  .mini-pieces-layer{ position:absolute; inset:0; }
+
   /* ---- Court ---- */
   .court-wrap{ background:var(--board-dark); border-radius:var(--radius); border:1px solid #0a1a17; padding:14px 10px; position:relative; display:flex; flex-direction:column; align-items:center; }
   .court-wrap > *{ width:100%; }
@@ -227,8 +286,8 @@
 
   .piece, .ghost-piece{
     width:60px; height:60px; border-radius:50%;
-    background:radial-gradient(circle at 32% 28%, var(--own) 0%, var(--own-dark) 78%);
-    color:#241705; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 32% 28%, #ffffff 0%, #cfcfcf 78%);
+    color:#1b1206; display:flex; flex-direction:column; align-items:center; justify-content:center;
     box-shadow:0 3px 6px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.18) inset;
     cursor:grab; line-height:1.1; touch-action:none;
   }
@@ -271,6 +330,19 @@
   .btn-reset:active{background:var(--panel-line);}
   .btn-reset.tool-active{ background:var(--own); color:#1b1206; border-color:var(--own); font-weight:700; }
 
+  .view-mode-row{ display:flex; justify-content:center; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+  .view-mode-btn.active{ background:var(--own); color:#1b1206; border-color:var(--own); font-weight:700; }
+
+  .opp-crop-wrap{ position:relative; overflow:visible; }
+  .court-wrap.view-attackline:not(.landscape) .opp-crop-wrap{
+    aspect-ratio:5.1/1;
+    overflow:hidden;
+  }
+  .court-wrap.view-attackline:not(.landscape) .opp-crop-wrap .opp-half{
+    position:absolute; left:0; right:0; bottom:0;
+  }
+  .court-wrap.view-own .opp-crop-wrap, .court-wrap.view-own .net{ display:none; }
+
   footer.note{ text-align:center; font-size:11px; color:var(--ink-dim); padding-top:4px; }
 
   .panel.opponent{order:1;}
@@ -279,8 +351,12 @@
 
   @media (min-width:860px){
     #tab-board.app-grid{
-      display:grid; grid-template-columns:220px 1fr 220px; align-items:start; gap:14px;
+      display:grid; grid-template-columns:220px 1fr 220px; align-items:stretch; gap:14px;
     }
+    #tab-board.app-grid .panel.own, #tab-board.app-grid .panel.opponent{
+      height:100%; min-height:0; overflow-y:auto;
+    }
+    #tab-board.app-grid .court-wrap{ height:100%; min-height:0; }
     .panel.own{order:1;}
     .court-wrap{order:2;}
     .panel.opponent{order:3;}
@@ -333,11 +409,6 @@
 </head>
 <body>
 
-<header class="top">
-  <div class="eyebrow">Volleyball Tactics Board</div>
-  <h1>作戦ボード</h1>
-</header>
-
 <div class="tabs">
   <button class="tab-btn active" data-tab="register">① チーム登録</button>
   <button class="tab-btn" data-tab="order">② オーダー設定</button>
@@ -383,6 +454,15 @@
       </form>
       <div class="error-msg" id="roster-error"></div>
       <div class="roster" id="roster-list"></div>
+      <div class="hint" style="margin-top:10px;">登録選手プレビュー(自コートのみ)</div>
+      <div class="mini-court" id="mini-court-register">
+        <div class="mini-net"></div>
+        <div class="mini-attack-line"></div>
+        <div class="mini-grid-line v" style="left:33.333%"></div>
+        <div class="mini-grid-line v" style="left:66.666%"></div>
+        <div class="mini-grid-line h" style="top:50%"></div>
+        <div class="mini-pieces-layer" id="mini-pieces-register"></div>
+      </div>
     </div>
   </section>
 
@@ -403,9 +483,26 @@
         <button data-set="2">Set 3</button>
       </div>
 
-      <div class="panel-head"><div class="title">スタメン(P1〜P6)</div></div>
-      <div id="order-slots"></div>
-      <div class="hint">P1〜P6はコートの回転順です。③の作戦ボードでこの並びを使ってローテーションできます。</div>
+      <div class="order-layout">
+        <div class="order-left">
+          <div class="panel-head"><div class="title">メンバー表(ドラッグでコートへ)</div></div>
+          <div class="roster" id="roster-order-drag"></div>
+          <div class="panel-head" style="margin-top:10px;"><div class="title">スタメン(P1〜P6)</div></div>
+          <div id="order-slots"></div>
+          <div class="hint">P1〜P6はコートの回転順です。③の作戦ボードでこの並びを使ってローテーションできます。</div>
+        </div>
+        <div class="order-right">
+          <div class="hint">配置プレビュー(自コートのみ)</div>
+          <div class="mini-court" id="mini-court-order">
+            <div class="mini-net"></div>
+            <div class="mini-attack-line"></div>
+            <div class="mini-grid-line v" style="left:33.333%"></div>
+            <div class="mini-grid-line v" style="left:66.666%"></div>
+            <div class="mini-grid-line h" style="top:50%"></div>
+            <div class="mini-pieces-layer" id="mini-pieces-order"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -429,13 +526,20 @@
 
     <div class="court-wrap">
       <div class="team-label opp">相手チーム</div>
+      <div class="view-mode-row">
+        <button class="btn-reset view-mode-btn active" data-view="full">全体</button>
+        <button class="btn-reset view-mode-btn" data-view="own">自コートのみ</button>
+        <button class="btn-reset view-mode-btn" data-view="attackline">相手アタックラインまで</button>
+      </div>
       <div class="court" id="court-el">
         <div class="ball-tray" id="ball-tray"><div class="ball-chip mikasa-ball" id="ball-chip"></div></div>
-        <div class="half opp-half" id="half-opp" data-team="opp">
-          <span class="court-side-label">相手</span>
-          <div class="grid-line gl-v1"></div>
-          <div class="grid-line gl-v2"></div>
-          <div class="grid-line gl-h1"></div>
+        <div class="opp-crop-wrap" id="opp-crop-wrap">
+          <div class="half opp-half" id="half-opp" data-team="opp">
+            <span class="court-side-label">相手</span>
+            <div class="grid-line gl-v1"></div>
+            <div class="grid-line gl-v2"></div>
+            <div class="grid-line gl-h1"></div>
+          </div>
         </div>
         <div class="net"></div>
         <div class="half own-half" id="half-own" data-team="own">
@@ -444,7 +548,7 @@
           <div class="grid-line gl-v2"></div>
           <div class="grid-line gl-h1"></div>
         </div>
-        <svg class="draw-svg" id="draw-svg"></svg>
+        <svg class="draw-svg" id="draw-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
       </div>
       <div class="team-label own">自チーム</div>
 
@@ -464,7 +568,6 @@
       </div>
 
       <div class="court-actions">
-        <button class="btn-reset" id="toggle-orientation">コートを横向きに</button>
         <button class="btn-reset" id="reset-own">自チームの配置をリセット</button>
         <button class="btn-reset" id="reset-opp">相手チームの配置をリセット</button>
       </div>
@@ -896,10 +999,17 @@
 
   const courtWrap = document.querySelector('.court-wrap');
   const courtEl2 = document.getElementById('court-el');
-  document.getElementById('toggle-orientation').addEventListener('click', (e)=>{
-    const isLandscape = courtWrap.classList.toggle('landscape');
-    e.target.textContent = isLandscape ? 'コートを縦向きに' : 'コートを横向きに';
-    requestAnimationFrame(fitCourt);
+
+  document.querySelectorAll('.view-mode-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.view-mode-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      courtWrap.classList.remove('view-own','view-attackline');
+      const mode = btn.dataset.view;
+      if(mode === 'own') courtWrap.classList.add('view-own');
+      else if(mode === 'attackline') courtWrap.classList.add('view-attackline');
+      requestAnimationFrame(fitCourt);
+    });
   });
 
   // Shrink the court (preserving its shape) so it always fully fits the
@@ -1061,6 +1171,31 @@
     count.textContent = t.roster.length + ' / ' + max;
     count.classList.toggle('full', t.roster.length>=max);
     document.getElementById('btn-roster-add').disabled = t.roster.length>=max;
+    renderMiniCourtRegister();
+  }
+
+  function renderMiniCourtRegister(){
+    const box = document.getElementById('mini-pieces-register');
+    if(!box) return;
+    box.innerHTML = '';
+    const t = getCurrentTournament();
+    const roster = t ? t.roster.slice().sort((a,b)=>a.num-b.num) : [];
+    if(roster.length===0){
+      box.appendChild(el('div','mini-empty-msg','登録された選手がここに表示されます'));
+      return;
+    }
+    const cols = Math.min(6, roster.length);
+    const rows = Math.ceil(roster.length / cols);
+    roster.forEach((p,i)=>{
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = ((col + 0.5) / cols) * 100;
+      const y = ((row + 0.5) / rows) * 100;
+      const piece = el('div','mini-piece' + (p.pos==='L' ? ' libero' : ''), escapeHtml(p.num));
+      piece.style.left = x + '%';
+      piece.style.top = y + '%';
+      piece.title = p.name + ' (' + p.pos + ')';
+      box.appendChild(piece);
+    });
   }
 
   document.getElementById('max-roster-edit').addEventListener('change', e=>{
@@ -1136,6 +1271,18 @@
     document.getElementById('no-match-hint').style.display = (t && t.matches.length) ? 'none' : '';
   }
 
+  function assignSlot(set, i, val){
+    if(val && set.starters.includes(val)){
+      const dupIdx = set.starters.indexOf(val);
+      if(dupIdx !== i) set.starters[dupIdx] = null;
+    }
+    set.starters[i] = val || null;
+    renderOrderTab();
+    refreshOwnFromLineup();
+    maybeAutoFormation(set);
+    render();
+  }
+
   function renderOrderTab(){
     const t = getCurrentTournament();
     const set = getCurrentSet();
@@ -1144,7 +1291,11 @@
     });
     const container = document.getElementById('order-slots');
     container.innerHTML = '';
-    if(!t || !set){ return; }
+    if(!t || !set){
+      document.getElementById('roster-order-drag').innerHTML = '';
+      renderMiniCourtOrder();
+      return;
+    }
     ROT_LABELS.forEach((label,i)=>{
       const row = el('div','slot-row');
       row.appendChild(el('span','slot-label', label));
@@ -1157,20 +1308,101 @@
         if(set.starters[i]===p.id) opt.selected = true;
         sel.appendChild(opt);
       });
-      sel.addEventListener('change', ()=>{
-        const val = sel.value || null;
-        if(val && set.starters.includes(val)){
-          const dupIdx = set.starters.indexOf(val);
-          if(dupIdx !== i) set.starters[dupIdx] = null;
-        }
-        set.starters[i] = val;
-        renderOrderTab();
-        refreshOwnFromLineup();
-        maybeAutoFormation(set);
-        render();
-      });
+      sel.addEventListener('change', ()=>{ assignSlot(set, i, sel.value); });
       row.appendChild(sel);
       container.appendChild(row);
+    });
+    renderRosterOrderDrag(t, set);
+    renderMiniCourtOrder();
+  }
+
+  function renderRosterOrderDrag(t, set){
+    const box = document.getElementById('roster-order-drag');
+    box.innerHTML = '';
+    if(!t.roster.length){
+      box.appendChild(el('div','empty-msg','①で選手を登録してください'));
+      return;
+    }
+    t.roster.slice().sort((a,b)=>a.num-b.num).forEach(p=>{
+      const inLineup = set.starters.includes(p.id);
+      const chip = el('div','player-chip' + (inLineup ? ' on-court' : ''));
+      chip.innerHTML =
+        '<span class="badge">'+escapeHtml(p.num)+'</span>' +
+        '<span class="pname">'+escapeHtml(p.name)+'</span>' +
+        '<span class="postag">'+escapeHtml(p.pos)+'</span>';
+      chip.addEventListener('pointerdown', (e)=>{ beginOrderDrag(e, p.id); });
+      box.appendChild(chip);
+    });
+  }
+
+  // ---- lightweight drag: member chip -> mini-court slot ----
+  let orderDrag = null;
+  function beginOrderDrag(e, playerId){
+    if(e.button !== undefined && e.button !== 0) return;
+    orderDrag = {playerId, moved:false, startX:e.clientX, startY:e.clientY, ghost:null};
+  }
+  document.addEventListener('pointermove', (e)=>{
+    if(!orderDrag) return;
+    const dx = e.clientX - orderDrag.startX, dy = e.clientY - orderDrag.startY;
+    if(!orderDrag.moved && Math.hypot(dx,dy) > 6){
+      orderDrag.moved = true;
+      document.body.classList.add('dragging');
+      const t = getCurrentTournament();
+      const p = t ? t.roster.find(r=>r.id===orderDrag.playerId) : null;
+      const g = document.createElement('div');
+      g.className = 'ghost-piece mikasa-ball';
+      g.style.background = 'radial-gradient(circle at 32% 28%, #ffffff 0%, #cfcfcf 78%)';
+      g.style.width = '48px'; g.style.height = '48px';
+      g.innerHTML = '<span class="pn" style="color:#1b1206;">'+(p?escapeHtml(p.num):'')+'</span>';
+      document.body.appendChild(g);
+      orderDrag.ghost = g;
+    }
+    if(orderDrag.moved && orderDrag.ghost){
+      orderDrag.ghost.style.left = e.clientX + 'px';
+      orderDrag.ghost.style.top = e.clientY + 'px';
+    }
+  });
+  document.addEventListener('pointerup', (e)=>{
+    if(!orderDrag) return;
+    if(orderDrag.moved){
+      if(orderDrag.ghost) orderDrag.ghost.remove();
+      document.body.classList.remove('dragging');
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const miniCourt = under && under.closest ? under.closest('#mini-court-order') : null;
+      const set = getCurrentSet();
+      if(miniCourt && set){
+        const r = miniCourt.getBoundingClientRect();
+        const rx = ((e.clientX - r.left) / r.width) * 100;
+        const ry = ((e.clientY - r.top) / r.height) * 100;
+        let bestIdx = 0, bestDist = Infinity;
+        ROT_ANCHORS.forEach((a,i)=>{
+          const d = Math.hypot(a.x-rx, a.y-ry);
+          if(d < bestDist){ bestDist = d; bestIdx = i; }
+        });
+        assignSlot(set, bestIdx, orderDrag.playerId);
+      }
+    }
+    orderDrag = null;
+  });
+
+  function renderMiniCourtOrder(){
+    const box = document.getElementById('mini-pieces-order');
+    if(!box) return;
+    box.innerHTML = '';
+    const t = getCurrentTournament();
+    const set = getCurrentSet();
+    if(!t || !set){
+      box.appendChild(el('div','mini-empty-msg','試合とセットを選択してください'));
+      return;
+    }
+    ROT_ANCHORS.forEach((pos,i)=>{
+      const pid = set.starters[i];
+      const p = pid ? t.roster.find(r=>r.id===pid) : null;
+      const piece = el('div','mini-piece' + (!p ? ' empty' : (p.pos==='L' ? ' libero' : '')), p ? escapeHtml(p.num) : ROT_LABELS[i]);
+      piece.style.left = pos.x + '%';
+      piece.style.top = pos.y + '%';
+      if(p) piece.title = p.name + ' (' + p.pos + ')';
+      box.appendChild(piece);
     });
   }
 
